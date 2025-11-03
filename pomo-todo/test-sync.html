@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PomoTodo GitHub 同步功能测试说明</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">PomoTodo GitHub 同步功能测试说明</h1>
+            <p class="text-gray-600">本文档详细说明如何测试 PomoTodo 的 GitHub 同步功能</p>
+        </header>
+
+        <main class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <section class="mb-6">
+                <h2 class="text-xl font-semibold mb-3 flex items-center">
+                    <i class="fa fa-info-circle text-blue-500 mr-2"></i>
+                    概述
+                </h2>
+                <p>PomoTodo 现在支持将任务数据（tasks.json）和历史记录（history.json）同步到 GitHub 仓库。本测试说明将指导您如何配置和测试此功能。</p>
+            </section>
+
+            <section class="mb-6">
+                <h2 class="text-xl font-semibold mb-3 flex items-center">
+                    <i class="fa fa-key text-blue-500 mr-2"></i>
+                    步骤 1: 创建 GitHub 个人访问令牌 (PAT)
+                </h2>
+                <ol class="list-decimal pl-5 space-y-2">
+                    <li>登录 GitHub 账号</li>
+                    <li>点击右上角头像图标，选择 "Settings"</li>
+                    <li>在左侧菜单中，选择 "Developer settings"</li>
+                    <li>选择 "Personal access tokens"，然后点击 "Generate new token"</li>
+                    <li>设置令牌名称（例如："PomoTodo Sync"）</li>
+                    <li>设置过期期限（建议建议选择 "No expiration" 或根据需要设置）</li>
+                    <li>选择必要的权限：
+                        <ul class="list-disc pl-5 mt-1">
+                            <li><code>repo</code> - 完整的仓库访问权限（必须）</li>
+                            <li><code>public_repo</code> - 如果仅需要同步公共仓库（替代 repo）</li>
+                        </ul>
+                    </li>
+                    <li>点击 "Generate token" 按钮</li>
+                    <li>复制生成的令牌（注意：此令牌只显示一次，请请妥善保存）</li>
+                </ol>
+            </section>
+
+            <section class="mb-6">
+                <h2 class="text-xl font-semibold mb-3 flex items-center">
+                    <i class="fa fa-repo text-blue-500 mr-2"></i>
+                    步骤 2: 准备 GitHub 仓库
+                </h2>
+                <p>您需要一个 GitHub 仓库来存储同步的数据。您可以：</p>
+                <ul class="list-disc pl-5 mt-2 space-y-1">
+                    <li>使用现有有的仓库</li>
+                    <li>创建一个新的专用仓库（推荐）</li>
+                </ul>
+                <p class="mt-2">仓库可以是公开或私有的，但您的令牌必须有访问该仓库的权限。</p>
+            </section>
+
+            <section class="mb-6">
+                <h2 class="text-xl font-semibold mb-3 flex items-center">
+                    <i class="fa fa-cog text-blue-500 mr-2"></i>
+                    步骤 3: 配置 PomoTodo GitHub 同步
+                </h2>
+                <ol class="list-decimal pl-5 space-y-2">
+                    <li>打开 PomoTodo 应用</li>
+                    <li>点击右上角的 GitHub 图标打开配置面板</li>
+                    <li>填写以下信息：
+                        <ul class="list-disc pl-5 mt-1">
+                            <li><strong>仓库 URL</strong> - 您的 GitHub 仓库 URL（例如：https://github.com/your-username/your-repo.git）</li>
+                            <li><strong>令牌</strong> - 您在步骤 1 中创建的个人访问令牌</li>
+                        </ul>
+                    </li>
+                    <li>选择存储类型：
+                        <ul class="list-disc pl-5 mt-1">
+                            <li><strong>虚拟存储</strong> - 仅在浏览器本地模拟文件系统（不实际同步到 GitHub）</li>
+                            <li><strong>本地存储</strong> - 同步到 GitHub（真实同步）</li>
+                        </ul>
+                    </li>
+                    <li>点击 "测试连接" 按钮验证配置是否正确</li>
+                    <li>点击 "保存配置" 按钮保存设置</li>
+                </ol>
+            </section>
+
+            <section class="mb-6">
+                <h2 class="text-xl font-semibold mb-3 flex items-center">
+                    <i class="fa fa-refresh text-blue-500 mr-2"></i>
+                    步骤 4: 测试同步功能
+                </h2>
+                <ol class="list-decimal pl-5 space-y-2">
+                    <li>添加一些任务到 PomoTodo</li>
+                    <li>完成一两个番茄时间</li>
+                    <li>点击顶部导航栏中的同步按钮（刷新图标）</li>
+                    <li>查看同步日志面板，了解同步过程</li>
+                    <li>检查 GitHub 仓库，确认 tasks.json 和 history.json 文件已创建/更新</li>
+                </ol>
+            </section>
+
+            <section class="mb-6">
+                <h2 class="text-xl font-semibold mb-3 flex items-center">
+                    <i class="fa fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                    常见问题与故障排除
+                </h2>
+                
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h3 class="font-medium mb-2">问题：连接测试失败</h3>
+                    <p class="text-sm text-gray-600">可能原因：</p>
+                    <ul class="list-disc pl-5 text-sm text-gray-600">
+                        <li>令牌无效或已过期</li>
+                        <li>令牌权限不足（需要 repo 或 public_repo 权限）</li>
+                        <li>仓库 URL 格式不正确</li>
+                        <li>仓库不存在或您没有访问权限</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h3 class="font-medium mb-2">问题：同步失败</h3>
+                    <p class="text-sm text-gray-600">可能原因：</p>
+                    <ul class="list-disc pl-5 text-sm text-gray-600">
+                        <li>网络连接问题</li>
+                        <li>GitHub API 限制（每分钟最多 5000 次请求）</li>
+                        <li>文件太大（GitHub API 对单个文件有大小限制）</li>
+                        <li>仓库分支不存在（当前默认使用 main 分支）</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-medium mb-2">问题：同步成功但 GitHub 上看不到文件</h3>
+                    <p class="text-sm text-gray-600">可能原因：</p>
+                    <ul class="list-disc pl-5 text-sm text-gray-600">
+                        <li>选择了错误的存储类型（应选择 "本地存储" 而非 "虚拟存储"）</li>
+                        <li>查看了错误的分支（默认同步到 main 分支）</li>
+                        <li>文件被创建在仓库的根目录下，请检查仓库的根目录</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold mb-3 flex items-center">
+                    <i class="fa fa-info-circle text-blue-500 mr-2"></i>
+                    关于同步功能的说明
+                </h2>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>同步功能会创建或更新仓库中的 tasks.json 和 history.json 文件</li>
+                    <li>每次同步都会创建一个新的提交</li>
+                    <li>同步日志面板会显示详细的同步过程和结果</li>
+                    <li>同步状态指示器会显示当前同步状态</li>
+                    <li>目前只支持将本地数据推送到 GitHub，不支持从 GitHub 拉取数据</li>
+                </ul>
+            </section>
+        </main>
+
+        <footer class="text-center text-gray-500 text-sm">
+            <p>PomoTodo &copy; 2025 - 番茄工作法与待办事项管理应用</p>
+        </footer>
+    </div>
+</body>
+</html>
