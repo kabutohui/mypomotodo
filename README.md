@@ -1,10 +1,8 @@
-# 欢迎使用你的秒哒应用代码包
-秒哒应用链接
-    URL:https://www.miaoda.cn/projects/app-8bamp6ymrksh
-
 # 番茄土豆 🍅🥔
 
 一款高效的番茄钟任务管理工具，结合番茄工作法和任务追踪功能，帮助用户提升工作效率和时间管理能力。
+
+在线地址：https://kabutohui.github.io/mypomotodo/
 
 ## 功能特性
 
