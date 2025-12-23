@@ -171,8 +171,6 @@ A: 支持所有现代浏览器（Chrome、Firefox、Safari、Edge等）。
 
 MIT License
 
-Copyright © 2025 番茄土豆
+Copyright kabutohui © 2025 番茄土豆
 
-## 了解更多
 
-查看帮助文档：[源码导出](https://cloud.baidu.com/doc/MIAODA/s/Xmewgmsq7)
