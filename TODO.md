@@ -292,6 +292,9 @@
   - GITHUB_PAGES_DEPLOY.md：完整部署指南
   - 更新README.md：添加快速部署说明
   - 包含常见问题和解决方案
+- [x] 修复pnpm workspace配置问题
+  - 删除不必要的pnpm-workspace.yaml文件
+  - 解决GitHub Actions构建错误
 
 ### 部署特性
 - ✅ 自动部署：推送代码自动触发部署

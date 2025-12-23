@@ -162,7 +162,21 @@ export default defineConfig({
 - 使用HashRouter代替BrowserRouter
 - 或添加404.html重定向
 
-### 4. 构建失败
+### 4. 构建失败：packages field missing or empty
+
+**原因**：pnpm检测到workspace配置文件但配置不正确
+
+**解决方案**：
+本项目已删除不必要的 `pnpm-workspace.yaml` 文件。如果你遇到此问题：
+```bash
+# 删除workspace配置文件
+rm pnpm-workspace.yaml
+
+# 重新安装依赖
+pnpm install
+```
+
+### 5. 构建失败：其他依赖错误
 
 **原因**：依赖安装或构建错误
 
