@@ -271,6 +271,41 @@
 - ✅ 三个对话框：编辑记录、补打番茄、删除确认
 - ✅ 标签输入支持逗号分隔
 
+## 最新改动需求（2025-01-18 v8）
+
+### GitHub Pages部署支持 ✅
+- [x] 配置Vite支持GitHub Pages部署
+  - 添加base路径配置（从环境变量读取）
+  - 支持子路径部署
+- [x] 修改React Router配置
+  - 添加basename支持
+  - 从import.meta.env.BASE_URL读取base路径
+- [x] 更新GitHub Actions workflow
+  - 使用pnpm替代npm
+  - 添加pnpm缓存优化构建速度
+  - 自动设置VITE_BASE_PATH环境变量
+  - 支持main和master分支
+- [x] 添加build:pages脚本
+  - 在package.json中添加构建命令
+  - 添加preview命令用于本地预览
+- [x] 创建详细部署文档
+  - GITHUB_PAGES_DEPLOY.md：完整部署指南
+  - 更新README.md：添加快速部署说明
+  - 包含常见问题和解决方案
+
+### 部署特性
+- ✅ 自动部署：推送代码自动触发部署
+- ✅ 智能路径：根据仓库名自动配置base路径
+- ✅ 缓存优化：使用pnpm缓存加速构建
+- ✅ 手动触发：支持workflow_dispatch手动部署
+- ✅ 自定义域名：支持配置自定义域名
+
+### 技术实现
+- ✅ vite.config.ts：base路径从环境变量读取
+- ✅ App.tsx：Router添加basename支持
+- ✅ .github/workflows/deploy.yml：完整的CI/CD配置
+- ✅ package.json：添加build:pages和preview脚本
+
 ## 最新改动需求（2025-01-18 v7）
 
 ### 已完成功能 ✅
@@ -298,8 +333,9 @@
 - ✅ 时间比较逻辑：new Date(task.reminderTime) <= new Date()
 
 ## 项目状态
-✅ v7版本优化完成！
+✅ v8版本完成！GitHub Pages部署支持已配置
+✅ v7版本优化完成！提醒功能完善
 📦 所有功能正常运行
 📚 文档齐全
-🚀 准备部署使用
-✨ 提醒功能完善
+🚀 准备部署到GitHub Pages
+✨ 支持自动化CI/CD部署

@@ -82,62 +82,44 @@ npm run dev -- --host 127.0.0.1
 
 ## GitHub Pages 部署
 
-### 方法一：使用GitHub Actions自动部署
+本项目已配置自动部署到GitHub Pages。详细部署指南请查看 [GITHUB_PAGES_DEPLOY.md](./GITHUB_PAGES_DEPLOY.md)
 
-1. 在GitHub仓库中创建 `.github/workflows/deploy.yml` 文件：
+### 快速部署步骤
 
-```yaml
-name: Deploy to GitHub Pages
+1. **创建GitHub仓库并推送代码**
+   ```bash
+   git init
+   git remote add origin https://github.com/你的用户名/你的仓库名.git
+   git add .
+   git commit -m "Initial commit"
+   git push -u origin main
+   ```
 
-on:
-  push:
-    branches: [ main ]
+2. **配置GitHub Pages**
+   - 进入仓库的 Settings → Pages
+   - Source 选择 "GitHub Actions"
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Build
-        run: npm run build
-        
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-```
+3. **自动部署**
+   - 代码推送后会自动触发部署
+   - 在 Actions 标签页查看部署进度
+   - 部署成功后访问：`https://你的用户名.github.io/你的仓库名/`
 
-2. 在仓库设置中启用GitHub Pages，选择 `gh-pages` 分支
-
-### 方法二：手动部署
+### 本地构建测试
 
 ```bash
 # 构建项目
-npm run build
+pnpm run build:pages
 
-# 进入构建目录
-cd dist
-
-# 初始化git仓库
-git init
-git add -A
-git commit -m 'deploy'
-
-# 推送到GitHub Pages分支
-git push -f git@github.com:你的用户名/你的仓库名.git main:gh-pages
-
-cd -
+# 预览构建结果
+pnpm run preview
 ```
+
+### 注意事项
+
+- 项目使用pnpm作为包管理器
+- 自动部署配置在 `.github/workflows/deploy.yml`
+- base路径会根据仓库名自动配置
+- 如使用自定义域名，需修改 `vite.config.ts` 中的base为 `'/'`
 
 ## 项目结构
 
