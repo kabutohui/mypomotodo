@@ -30,6 +30,8 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 9
+      - name: Set npm registry to public
+        run: pnpm config set registry https://registry.npmjs.org/
       
       - name: Get pnpm store directory
         shell: bash
