@@ -8,7 +8,8 @@
     import {
       makeTagger,
       injectedGuiListenerPlugin,
-      injectOnErrorPlugin
+      injectOnErrorPlugin,
+      monitorPlugin
     } from "miaoda-sc-plugin";
 
     const env: ConfigEnv = { command: "serve", mode: "development" };
@@ -111,7 +112,15 @@
     };
   }
 },
-
+,
+        monitorPlugin(
+          {
+            scriptSrc: 'https://resource-static.cdn.bcebos.com/sentry/browser.sentry.min.js',
+            sentryDsn: 'https://e3c07b90fcb5207f333d50ac24a99d3e@sentry.miaoda.cn/233',
+            environment: 'undefined',
+            appId: 'app-8bamp6ymrksh'
+          }
+        )
       ]
     });
     

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Timer, Trash2, GripVertical, MoreVertical, Bell, Edit2, Play, Pause, Square, ChevronDown, ChevronUp, Calendar, BarChart3, History as HistoryIcon, Settings, BookOpen, Save, Download, Upload, Github, Plus } from 'lucide-react';
+import { Timer, Trash2, GripVertical, MoreVertical, Bell, Edit2, Play, Pause, Square, ChevronDown, ChevronUp, Calendar, BarChart3, History as HistoryIcon, Settings, BookOpen, Save, Download, Upload, Github, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { saveTasks, loadTasks, saveRecords, loadRecords, loadSettings, saveSettings, exportAllData, importAllData } from '@/lib/storage';
 import { getTodayPomodoroCount, getWeekPomodoroCount } from '@/lib/stats';
-import { uploadToGitHub, downloadFromGitHub } from '@/lib/github-sync';
+import { uploadToGitHub, downloadFromGitHub, syncToGitHub } from '@/lib/github-sync';
 import type { PomodoroTask, PomodoroRecord, AppSettings } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, startOfDay, endOfDay, subDays, isWithinInterval } from 'date-fns';
@@ -54,6 +54,8 @@ export function TasksPage() {
   const [timeLeft, setTimeLeft] = useState(settings.pomodoroDuration * 60);
   const [currentPomodoroTask, setCurrentPomodoroTask] = useState<string>('');
   const [currentPomodoroStartTime, setCurrentPomodoroStartTime] = useState<Date | null>(null);
+  const [timerEndTime, setTimerEndTime] = useState<number | null>(null); // 计时器结束时间戳
+  const [pausedTimeLeft, setPausedTimeLeft] = useState<number | null>(null); // 暂停时剩余时间
   
   // 番茄完成后的输入状态
   const [showPomodoroInput, setShowPomodoroInput] = useState(false);
@@ -69,6 +71,8 @@ export function TasksPage() {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [tempSettings, setTempSettings] = useState<AppSettings>(settings);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   
   // 说明文档对话框
   const [docsDialogOpen, setDocsDialogOpen] = useState(false);
@@ -113,11 +117,68 @@ export function TasksPage() {
   
   const { toast } = useToast();
 
+  // 请求浏览器通知权限
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // 发送浏览器通知
+  const sendBrowserNotification = (title: string, body: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        const notification = new Notification(title, {
+          body,
+          icon: '/favicon.png',
+          badge: '/favicon.png',
+          tag: 'pomodoro-complete',
+          requireInteraction: false,
+        });
+
+        // 点击通知时聚焦窗口
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+
+        // 3秒后自动关闭
+        setTimeout(() => {
+          notification.close();
+        }, 3000);
+      } catch (error) {
+        console.error('发送通知失败:', error);
+      }
+    }
+  };
+
   // 加载数据
   useEffect(() => {
     setTasks(loadTasks().sort((a, b) => a.order - b.order));
     setRecords(loadRecords());
   }, []);
+
+  // 自动同步定时器（每2小时）
+  useEffect(() => {
+    if (!autoSyncEnabled || !settings.githubSync.enabled) return;
+
+    // 立即执行一次同步（如果距离上次同步超过2小时）
+    const checkAndSync = () => {
+      if (!lastSyncTime || Date.now() - lastSyncTime.getTime() > 2 * 60 * 60 * 1000) {
+        handleSmartSync();
+      }
+    };
+
+    // 首次加载时检查
+    checkAndSync();
+
+    // 设置定时器，每2小时同步一次
+    const interval = setInterval(() => {
+      handleSmartSync();
+    }, 2 * 60 * 60 * 1000); // 2小时
+
+    return () => clearInterval(interval);
+  }, [autoSyncEnabled, settings.githubSync.enabled]);
 
   // 保存任务
   useEffect(() => {
@@ -126,23 +187,24 @@ export function TasksPage() {
     }
   }, [tasks]);
 
-  // 番茄钟计时器
+  // 番茄钟计时器 - 使用真实时间戳，确保标签页切换或最小化后继续运行
   useEffect(() => {
-    if (!isTimerRunning || isPaused) return;
+    if (!isTimerRunning || isPaused || !timerEndTime) return;
 
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          // 番茄钟完成
-          completePomodo();
-          return settings.pomodoroDuration * 60;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((timerEndTime - now) / 1000));
+      
+      setTimeLeft(remaining);
+      
+      if (remaining <= 0) {
+        // 番茄钟完成
+        completePomodo();
+      }
+    }, 100); // 使用100ms更新频率，确保更准确
 
     return () => clearInterval(interval);
-  }, [isTimerRunning, isPaused]);
+  }, [isTimerRunning, isPaused, timerEndTime]);
 
   // 解析任务输入（支持#标签）
   const parseTaskInput = (input: string) => {
@@ -260,9 +322,14 @@ export function TasksPage() {
 
   // 开始番茄钟
   const startPomodoro = (taskTitle?: string) => {
+    const duration = settings.pomodoroDuration * 60; // 秒
+    const endTime = Date.now() + duration * 1000; // 毫秒
+    
     setIsTimerRunning(true);
     setIsPaused(false);
-    setTimeLeft(settings.pomodoroDuration * 60);
+    setTimeLeft(duration);
+    setTimerEndTime(endTime);
+    setPausedTimeLeft(null);
     setCurrentPomodoroTask(taskTitle || '');
     setCurrentPomodoroStartTime(new Date());
     setShowPomodoroInput(false);
@@ -271,10 +338,17 @@ export function TasksPage() {
   // 暂停番茄钟
   const pausePomodoro = () => {
     setIsPaused(true);
+    setPausedTimeLeft(timeLeft); // 保存当前剩余时间
+    setTimerEndTime(null); // 清除结束时间戳
   };
 
   // 继续番茄钟
   const resumePomodoro = () => {
+    if (pausedTimeLeft !== null) {
+      const endTime = Date.now() + pausedTimeLeft * 1000;
+      setTimerEndTime(endTime);
+      setPausedTimeLeft(null);
+    }
     setIsPaused(false);
   };
 
@@ -283,6 +357,8 @@ export function TasksPage() {
     setIsTimerRunning(false);
     setIsPaused(false);
     setTimeLeft(settings.pomodoroDuration * 60);
+    setTimerEndTime(null);
+    setPausedTimeLeft(null);
     setCurrentPomodoroTask('');
     setCurrentPomodoroStartTime(null);
     setShowPomodoroInput(false);
@@ -296,6 +372,13 @@ export function TasksPage() {
     setIsTimerRunning(false);
     setIsPaused(false);
     setTimeLeft(settings.pomodoroDuration * 60);
+
+    // 发送浏览器通知
+    const taskName = currentPomodoroTask || '番茄钟';
+    sendBrowserNotification(
+      '🍅 番茄钟完成！',
+      `恭喜完成 ${settings.pomodoroDuration} 分钟的专注时间${currentPomodoroTask ? `：${taskName}` : '！'}`
+    );
 
     // 显示输入框，自动填充第一个任务（标签在前，格式：#工作 xxx）
     const incompleteTasks = tasks.filter(t => !t.completed);
@@ -471,6 +554,41 @@ export function TasksPage() {
     } catch (error) {
       toast({
         title: '下载失败',
+        description: error instanceof Error ? error.message : '未知错误',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // 智能同步（先拉取，合并后上传）
+  const handleSmartSync = async () => {
+    if (!settings.githubSync.enabled) {
+      toast({
+        title: '请先配置GitHub同步',
+        description: '请在设置中填写完整的GitHub配置信息',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const result = await syncToGitHub(settings.githubSync);
+      setLastSyncTime(new Date());
+      
+      // 刷新页面数据
+      setTasks(loadTasks().sort((a, b) => a.order - b.order));
+      setRecords(loadRecords());
+      
+      toast({
+        title: '同步成功 ✅',
+        description: `已合并 ${result.mergedTasks} 个任务和 ${result.mergedRecords} 条记录`,
+      });
+    } catch (error) {
+      toast({
+        title: '同步失败',
         description: error instanceof Error ? error.message : '未知错误',
         variant: 'destructive',
       });
@@ -835,6 +953,18 @@ export function TasksPage() {
             <h1 className="text-xl font-bold">番茄土豆</h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* 数据同步按钮 */}
+            {settings.githubSync.enabled && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSmartSync}
+                disabled={isSyncing}
+                title={lastSyncTime ? `上次同步: ${format(lastSyncTime, 'HH:mm', { locale: zhCN })}` : '点击同步数据'}
+              >
+                <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -976,16 +1106,17 @@ export function TasksPage() {
                           {format(new Date(record.startTime), 'HH:mm', { locale: zhCN })}-
                           {format(new Date(record.endTime), 'HH:mm', { locale: zhCN })}
                         </span>
-                        <span className="ml-2">{record.taskTitle}</span>
+                        {/* 标签显示在任务描述之前 */}
                         {record.tags.length > 0 && (
                           <span className="ml-2">
                             {record.tags.map((tag) => (
-                              <Badge key={tag} variant="secondary" className="text-xs ml-1">
+                              <Badge key={tag} variant="secondary" className="text-xs mr-1">
                                 #{tag}
                               </Badge>
                             ))}
                           </span>
                         )}
+                        <span className={record.tags.length > 0 ? '' : 'ml-2'}>{record.taskTitle}</span>
                       </div>
                     ))
                   )}
@@ -1058,13 +1189,14 @@ export function TasksPage() {
                           ) : (
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm truncate">{task.title}</span>
+                                {/* 标签显示在任务描述之前 */}
                                 {task.tags.map((tag) => (
-                                  <Badge key={tag} variant="secondary" className="text-xs">
+                                  <Badge key={tag} variant="secondary" className="text-xs flex-shrink-0">
                                     #{tag}
                                   </Badge>
                                 ))}
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-sm truncate">{task.title}</span>
+                                <span className="text-xs text-muted-foreground flex-shrink-0">
                                   {task.completedPomodoros}/{task.estimatedPomodoros}🍅
                                 </span>
                               </div>
@@ -1407,9 +1539,9 @@ export function TasksPage() {
                                 {format(new Date(record.startTime), 'HH:mm', { locale: zhCN })}-
                                 {format(new Date(record.endTime), 'HH:mm', { locale: zhCN })}
                               </span>
-                              <span className="ml-2">{record.taskTitle}</span>
+                              {/* 标签显示在任务描述之前 */}
                               {record.tags.length > 0 && (
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1 flex-shrink-0">
                                   {record.tags.map((tag) => (
                                     <Badge key={tag} variant="secondary" className="text-xs">
                                       #{tag}
@@ -1417,6 +1549,7 @@ export function TasksPage() {
                                   ))}
                                 </span>
                               )}
+                              <span className={cn("truncate", record.tags.length === 0 && "ml-2")}>{record.taskTitle}</span>
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1538,13 +1671,14 @@ export function TasksPage() {
                             className="text-sm py-2 px-3 rounded hover:bg-accent/50 transition-colors flex items-center gap-2"
                           >
                             <Checkbox checked={true} disabled />
-                            <span className="line-through text-muted-foreground">{task.title}</span>
+                            {/* 标签显示在任务描述之前 */}
                             {task.tags.map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
+                              <Badge key={tag} variant="outline" className="text-xs flex-shrink-0">
                                 #{tag}
                               </Badge>
                             ))}
-                            <span className="text-xs text-muted-foreground ml-auto">
+                            <span className="line-through text-muted-foreground">{task.title}</span>
+                            <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">
                               完成{task.completedPomodoros}个番茄
                             </span>
                           </div>
