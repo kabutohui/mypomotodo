@@ -101,11 +101,6 @@
 7. ✅ 构建项目（`pnpm run build:pages`）
 8. ✅ 上传构建产物到 GitHub Pages
 
-### 智能路径配置
-```yaml
-VITE_BASE_PATH: ${{ github.event.repository.name != github.repository_owner.name && format('/{0}/', github.event.repository.name) || '/' }}
-```
-
 **逻辑**:
 - 如果是用户站点（username.github.io），使用 `/`
 - 如果是项目站点（username.github.io/repo-name），使用 `/repo-name/`
